@@ -1,0 +1,14 @@
+{
+  "cloudflare_api": {
+    "auth_email": "user@site.com",
+    "api_key": "XXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "zone_id": "XXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "dns_record_name": "my.site.com"
+  },
+  "public_ip_urls": [
+    "http://icanhazip.com/",
+    "http://myexternalip.com/raw",
+    "http://ifconfig.me/ip"
+  ],
+  "interval": 1
+}
