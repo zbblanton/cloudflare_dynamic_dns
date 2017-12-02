@@ -152,14 +152,14 @@ func main() {
   } else {
     fmt.Printf("Found DNS record.\n")
   }
-  //id := cf_info.Id
+  id := cf_info.Id
   cf_ip := cf_info.Content
   for range time.NewTicker(time.Duration(config_data.Interval * 60) * time.Second).C {
     curr_ip := get_public_ip(config_data.Public_ip_urls[0])
     fmt.Printf("Current public IP is:  %s\n", curr_ip)
     if(curr_ip != cf_ip){
       fmt.Printf("Public IP has changed. Updating Cloudflare\n")
-      //cf_api.dns_update(id, "home.blantontechnology.com", curr_ip)
+      cf_api.dns_update(id, cf_api.Dns_record_name, curr_ip)
       cf_ip = curr_ip
     }
   }
