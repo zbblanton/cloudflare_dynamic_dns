@@ -98,7 +98,7 @@ func (c Cloudflare_api) dns_record_info(dns_record_name string) (Cf_result, erro
 
 func (c Cloudflare_api) dns_update(id string, name string, ip string) string {
   api_url := c.Api_base_url + c.Zone_id + "/dns_records/" + id
-  fmt.Println(ip)
+
   json_data := `
     {
       "type": "A",
@@ -108,7 +108,6 @@ func (c Cloudflare_api) dns_update(id string, name string, ip string) string {
       "proxied": false
     }
   `
-  fmt.Println(json_data)
 
   client := &http.Client{}
   req, err := http.NewRequest("PUT", api_url, strings.NewReader(json_data))
@@ -129,11 +128,8 @@ func (c Cloudflare_api) dns_update(id string, name string, ip string) string {
   if err != nil {
       log.Fatal(err)
   }
-  fmt.Printf(string(resp_data))
 
-
-
-	return "resp.Body"
+	return string(resp_data)
 }
 
 func main() {
