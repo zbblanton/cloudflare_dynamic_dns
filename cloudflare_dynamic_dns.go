@@ -143,12 +143,12 @@ func main() {
     config_data.Cloudflare_api.Zone_id,
     config_data.Cloudflare_api.Dns_record_name}
 
-  fmt.Printf("Searching for %s DNS record on Cloudflare\n", "home.blantontechnology.com")
-  cf_info, err := cf_api.dns_record_info("home.blantontechnology.com")
+  fmt.Printf("Searching for %s DNS record on Cloudflare\n", cf_api.Dns_record_name)
+  cf_info, err := cf_api.dns_record_info(cf_api.Dns_record_name)
   if(err != nil){
     fmt.Printf("Not found: Record will be added.\n")
     //Add code to add dns record
-    cf_info, err = cf_api.dns_record_info("home.blantontechnology.com")
+    cf_info, err = cf_api.dns_record_info(cf_api.Dns_record_name)
   } else {
     fmt.Printf("Found DNS record.\n")
   }
