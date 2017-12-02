@@ -59,13 +59,15 @@ func get_public_ip(url string) string {
   }
   defer resp.Body.Close() //Close the resp body when finished
 
-  //Use ioutil to read the byte slice from resp body, use this to return as a string
-  resp_data, err := ioutil.ReadAll(resp.Body)
+  //Use ioutil to read the byte slice from resp body, use this to return as a string, then trim the newline
+  r, err := ioutil.ReadAll(resp.Body)
   if err != nil {
       log.Fatal(err)
   }
+  s := string(r)
+  s = strings.TrimSuffix(s, "\n")
 
-  return string(resp_data)
+  return s
 }
 
 func (c Cloudflare_api) dns_record_info(dns_record_name string) (Cf_result, error) {
@@ -85,20 +87,18 @@ func (c Cloudflare_api) dns_record_info(dns_record_name string) (Cf_result, erro
   }
   defer resp.Body.Close() //Close the resp body when finished
 
-  test_data := Cf_data{}
-  json.NewDecoder(resp.Body).Decode(&test_data)
+  r := Cf_data{}
+  json.NewDecoder(resp.Body).Decode(&r)
 
-  if test_data.Result_info.Total_count < 1 {
-    //return test_data.Result[0].Id
+  if r.Result_info.Total_count < 1 {
     return Cf_result{}, fmt.Errorf("Cloudflare found no results for %s", dns_record_name)
-    //return test_data.Result[0], 0
   }
-	return test_data.Result[0], nil
+	return r.Result[0], nil
 }
 
 func (c Cloudflare_api) dns_update(id string, name string, ip string) string {
   api_url := c.Api_base_url + c.Zone_id + "/dns_records/" + id
-
+  fmt.Println(ip)
   json_data := `
     {
       "type": "A",
@@ -108,6 +108,7 @@ func (c Cloudflare_api) dns_update(id string, name string, ip string) string {
       "proxied": false
     }
   `
+  fmt.Println(json_data)
 
   client := &http.Client{}
   req, err := http.NewRequest("PUT", api_url, strings.NewReader(json_data))
@@ -122,6 +123,15 @@ func (c Cloudflare_api) dns_update(id string, name string, ip string) string {
     log.Fatal(err)
   }
   defer resp.Body.Close() //Close the resp body when finished
+
+
+  resp_data, err := ioutil.ReadAll(resp.Body)
+  if err != nil {
+      log.Fatal(err)
+  }
+  fmt.Printf(string(resp_data))
+
+
 
 	return "resp.Body"
 }
@@ -147,8 +157,7 @@ func main() {
   cf_info, err := cf_api.dns_record_info(cf_api.Dns_record_name)
   if(err != nil){
     fmt.Printf("Not found: Record will be added.\n")
-    //Add code to add dns record
-    cf_info, err = cf_api.dns_record_info(cf_api.Dns_record_name)
+    log.Fatal("Adding a record is not supported yet.")
   } else {
     fmt.Printf("Found DNS record.\n")
   }
@@ -156,7 +165,7 @@ func main() {
   cf_ip := cf_info.Content
   for range time.NewTicker(time.Duration(config_data.Interval * 60) * time.Second).C {
     curr_ip := get_public_ip(config_data.Public_ip_urls[0])
-    fmt.Printf("Current public IP is:  %s\n", curr_ip)
+    fmt.Printf("Current public IP is: %s\n", curr_ip)
     if(curr_ip != cf_ip){
       fmt.Printf("Public IP has changed. Updating Cloudflare\n")
       cf_api.dns_update(id, cf_api.Dns_record_name, curr_ip)
