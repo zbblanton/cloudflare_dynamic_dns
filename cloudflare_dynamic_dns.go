@@ -10,6 +10,7 @@ import(
   "strings"
   "io/ioutil"
   "time"
+  "net/smtp"
 )
 
 type Cloudflare_api struct {
@@ -20,6 +21,16 @@ type Cloudflare_api struct {
   Dns_record_name string
 }
 
+type Smtp_config struct {
+  Host string
+  Port string
+  User string
+  Pass string
+  To string
+  From string
+  Enable bool
+}
+
 type Config_file struct{
   Cloudflare_api Cloudflare_api
   Auth_email string
@@ -28,6 +39,7 @@ type Config_file struct{
   Dns_record_name string
   Public_ip_urls []string
   Interval int
+  Smtp Smtp_config
 }
 
 type Cf_result struct {
@@ -74,6 +86,19 @@ func get_public_ip(url string) string {
   s = strings.TrimSuffix(s, "\n")
 
   return s
+}
+
+func sendmail(c Smtp_config, s string, m string) error {
+	auth := smtp.PlainAuth("", c.User, c.Pass, c.Host)
+	to := []string{c.To}
+	msg := []byte("To: " + c.To + "\r\n" + "Subject: " + s + "\r\n" + "\r\n" + m + "\r\n")
+  h := c.Host + ":" + c.Port
+	err := smtp.SendMail(h, auth, c.From, to, msg)
+	if err != nil {
+		return(err)
+	}
+
+	return nil
 }
 
 func (c Cloudflare_api) dns_record_info(dns_record_name string) (Cf_result, error) {
@@ -196,6 +221,15 @@ func main() {
         log.Fatal(err)
       }
       fmt.Println("IP Updated.")
+      if(config_data.Smtp.Enable){
+        s := "Public IP Changed to: " + curr_ip
+        m := "Your Dynamic IP has changed to " + curr_ip + ". Cloudflare DNS has been updated."
+        err := sendmail(config_data.Smtp, s, m)
+        if(err != nil){
+          //TODO: Add code to print actual error.
+          fmt.Println("Email could not be sent.")
+        }
+      }
       cf_ip = curr_ip
     }
   }
