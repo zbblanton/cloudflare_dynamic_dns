@@ -41,10 +41,16 @@ type Cf_result_info struct {
   Total_count int
 }
 
+type Cf_error struct {
+  Code int
+  Message string
+}
+
 type Cf_data struct {
   Success bool
   Result []Cf_result
   Result_info Cf_result_info
+  Errors []Cf_error
 }
 
 func get_public_ip(url string) string {
@@ -90,13 +96,21 @@ func (c Cloudflare_api) dns_record_info(dns_record_name string) (Cf_result, erro
   r := Cf_data{}
   json.NewDecoder(resp.Body).Decode(&r)
 
+  //Check if success, print errors from api if not.
+  if !r.Success {
+    for _, e := range r.Errors {
+      fmt.Printf("Error code %s: %s", e.Code, e.Message)
+    }
+    log.Fatal("Api call failed.")
+  }
+
   if r.Result_info.Total_count < 1 {
     return Cf_result{}, fmt.Errorf("Cloudflare found no results for %s", dns_record_name)
   }
 	return r.Result[0], nil
 }
 
-func (c Cloudflare_api) dns_update(id string, name string, ip string) string {
+func (c Cloudflare_api) dns_update(id string, name string, ip string) error {
   api_url := c.Api_base_url + c.Zone_id + "/dns_records/" + id
 
   json_data := `
@@ -123,13 +137,26 @@ func (c Cloudflare_api) dns_update(id string, name string, ip string) string {
   }
   defer resp.Body.Close() //Close the resp body when finished
 
+  r := Cf_data{}
+  json.NewDecoder(resp.Body).Decode(&r)
 
+  //Check if success, print errors from api if not.
+  if !r.Success {
+    for _, e := range r.Errors {
+      fmt.Printf("Error code %d: %s\n", e.Code, e.Message)
+    }
+    return fmt.Errorf("Api call failed")
+  }
+
+  /*
+  Marked to be deleted after testing.
   resp_data, err := ioutil.ReadAll(resp.Body)
   if err != nil {
       log.Fatal(err)
   }
+  */
 
-	return string(resp_data)
+	return nil
 }
 
 func main() {
@@ -152,10 +179,10 @@ func main() {
   fmt.Printf("Searching for %s DNS record on Cloudflare\n", cf_api.Dns_record_name)
   cf_info, err := cf_api.dns_record_info(cf_api.Dns_record_name)
   if(err != nil){
-    fmt.Printf("Not found: Record will be added.\n")
-    log.Fatal("Adding a record is not supported yet.")
+    fmt.Println("Not found: Record will be added.")
+    log.Fatal("Adding a new record is not supported yet.")
   } else {
-    fmt.Printf("Found DNS record.\n")
+    fmt.Println("Found DNS record.")
   }
   id := cf_info.Id
   cf_ip := cf_info.Content
@@ -163,8 +190,12 @@ func main() {
     curr_ip := get_public_ip(config_data.Public_ip_urls[0])
     fmt.Printf("Current public IP is: %s\n", curr_ip)
     if(curr_ip != cf_ip){
-      fmt.Printf("Public IP has changed. Updating Cloudflare\n")
-      cf_api.dns_update(id, cf_api.Dns_record_name, curr_ip)
+      fmt.Println("Public IP has changed. Updating Cloudflare.")
+      err := cf_api.dns_update(id, cf_api.Dns_record_name, curr_ip)
+      if(err != nil){
+        log.Fatal(err)
+      }
+      fmt.Println("IP Updated.")
       cf_ip = curr_ip
     }
   }
