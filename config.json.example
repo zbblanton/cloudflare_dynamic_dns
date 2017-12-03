@@ -5,6 +5,15 @@
     "zone_id": "XXXXXXXXXXXXXXXXXXXXXXXXXXX",
     "dns_record_name": "my.site.com"
   },
+  "smtp": {
+    "host": "smtp.gmail.com",
+    "port": "587",
+    "user": "username@gmail.com",
+    "pass": "yourpassword",
+    "to": "user@gmail.com",
+    "from": "user@gmail.com",
+    "enable": true
+  },
   "public_ip_urls": [
     "http://icanhazip.com/",
     "http://myexternalip.com/raw",
