@@ -11,6 +11,7 @@ import(
   "io/ioutil"
   "time"
   "net/smtp"
+  "flag"
 )
 
 type Cloudflare_api struct {
@@ -222,6 +223,10 @@ func check_cf(cf_api Cloudflare_api, smtp Smtp_config, curr_ip string) error {
 }
 
 func main() {
+  cron_ptr := flag.Bool("cron", false, "Run as a cronjob")
+
+  flag.Parse()
+
   file, err := os.Open("config.json")
   if err != nil {
     fmt.Println("Did you rename config.json.example to config.json? :) ")
@@ -242,6 +247,9 @@ func main() {
   for {
     curr_ip := get_public_ip(config_data.Public_ip_urls[0])
     check_cf(cf_api, config_data.Smtp, curr_ip)
+    if(*cron_ptr){
+      return
+    }
     time.Sleep(time.Duration(config_data.Interval * 60) * time.Second)
   }
 }
