@@ -89,14 +89,17 @@ func get_public_ip(url string) string {
 }
 
 func sendmail(c Smtp_config, s string, m string) error {
-	auth := smtp.PlainAuth("", c.User, c.Pass, c.Host)
-	to := []string{c.To}
-	msg := []byte("To: " + c.To + "\r\n" + "Subject: " + s + "\r\n" + "\r\n" + m + "\r\n")
-  h := c.Host + ":" + c.Port
-	err := smtp.SendMail(h, auth, c.From, to, msg)
-	if err != nil {
-		return(err)
-	}
+  //Only send if smtp is enabled.
+  if(c.Enable){
+  	auth := smtp.PlainAuth("", c.User, c.Pass, c.Host)
+  	to := []string{c.To}
+  	msg := []byte("To: " + c.To + "\r\n" + "Subject: " + s + "\r\n" + "\r\n" + m + "\r\n")
+    h := c.Host + ":" + c.Port
+  	err := smtp.SendMail(h, auth, c.From, to, msg)
+  	if err != nil {
+  		return(err)
+  	}
+  }
 
 	return nil
 }
@@ -184,12 +187,47 @@ func (c Cloudflare_api) dns_update(id string, name string, ip string) error {
 	return nil
 }
 
+func check_cf(cf_api Cloudflare_api, smtp Smtp_config, curr_ip string) error {
+  fmt.Printf("Getting info for %s DNS record on Cloudflare.\n", cf_api.Dns_record_name)
+  cf_info, err := cf_api.dns_record_info(cf_api.Dns_record_name)
+  if(err != nil){
+    fmt.Println("Not found: DNS Record will be added.")
+    return fmt.Errorf("Adding a new record is not supported yet.")
+  }
+
+  cf_ip := cf_info.Content
+
+  fmt.Printf("Current public IP is: %s\n", curr_ip)
+  if(curr_ip != cf_ip){
+    fmt.Println("Public IP has changed. Updating Cloudflare.")
+    err := cf_api.dns_update(cf_info.Id, cf_api.Dns_record_name, curr_ip)
+    if(err != nil){
+      return err
+    }
+    fmt.Println("IP Updated.")
+
+    //Send email
+    s := "Public IP Changed to: " + curr_ip
+    m := "Your Dynamic IP has changed to " + curr_ip + ". Cloudflare DNS has been updated."
+    err = sendmail(smtp, s, m)
+    if(err != nil){
+      //TODO: Add code to print actual error.
+      fmt.Println("Email could not be sent.")
+    }
+  } else {
+    fmt.Println("No IP change.")
+  }
+
+  return nil
+}
+
 func main() {
   file, err := os.Open("config.json")
   if err != nil {
     fmt.Println("Did you rename config.json.example to config.json? :) ")
   	log.Fatal(err)
   }
+
   config_data := Config_file{}
   json.NewDecoder(file).Decode(&config_data)
   file.Close()
@@ -201,36 +239,9 @@ func main() {
     config_data.Cloudflare_api.Zone_id,
     config_data.Cloudflare_api.Dns_record_name}
 
-  fmt.Printf("Searching for %s DNS record on Cloudflare\n", cf_api.Dns_record_name)
-  cf_info, err := cf_api.dns_record_info(cf_api.Dns_record_name)
-  if(err != nil){
-    fmt.Println("Not found: Record will be added.")
-    log.Fatal("Adding a new record is not supported yet.")
-  } else {
-    fmt.Println("Found DNS record.")
-  }
-  id := cf_info.Id
-  cf_ip := cf_info.Content
-  for range time.NewTicker(time.Duration(config_data.Interval * 60) * time.Second).C {
+  for {
     curr_ip := get_public_ip(config_data.Public_ip_urls[0])
-    fmt.Printf("Current public IP is: %s\n", curr_ip)
-    if(curr_ip != cf_ip){
-      fmt.Println("Public IP has changed. Updating Cloudflare.")
-      err := cf_api.dns_update(id, cf_api.Dns_record_name, curr_ip)
-      if(err != nil){
-        log.Fatal(err)
-      }
-      fmt.Println("IP Updated.")
-      if(config_data.Smtp.Enable){
-        s := "Public IP Changed to: " + curr_ip
-        m := "Your Dynamic IP has changed to " + curr_ip + ". Cloudflare DNS has been updated."
-        err := sendmail(config_data.Smtp, s, m)
-        if(err != nil){
-          //TODO: Add code to print actual error.
-          fmt.Println("Email could not be sent.")
-        }
-      }
-      cf_ip = curr_ip
-    }
+    check_cf(cf_api, config_data.Smtp, curr_ip)
+    time.Sleep(time.Duration(config_data.Interval * 60) * time.Second)
   }
 }
