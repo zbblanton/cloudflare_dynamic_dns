@@ -224,10 +224,11 @@ func check_cf(cf_api Cloudflare_api, smtp Smtp_config, curr_ip string) error {
 
 func main() {
   cron_ptr := flag.Bool("cron", false, "Run as a cronjob")
+  config_ptr := flag.String("config", "config.json", "Path to config file.")
 
   flag.Parse()
 
-  file, err := os.Open("config.json")
+  file, err := os.Open(*config_ptr)
   if err != nil {
     fmt.Println("Did you rename config.json.example to config.json? :) ")
   	log.Fatal(err)
