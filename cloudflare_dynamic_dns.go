@@ -128,7 +128,7 @@ func (c Cloudflare_api) dns_record_info(dns_record_name string) (Cf_result, erro
   //Check if success, print errors from api if not.
   if !r.Success {
     for _, e := range r.Errors {
-      fmt.Printf("Error code %s: %s", e.Code, e.Message)
+      log.Printf("Error code %s: %s", e.Code, e.Message)
     }
     log.Fatal("Api call failed.")
   }
@@ -172,7 +172,7 @@ func (c Cloudflare_api) dns_update(id string, name string, ip string) error {
   //Check if success, print errors from api if not.
   if !r.Success {
     for _, e := range r.Errors {
-      fmt.Printf("Error code %d: %s\n", e.Code, e.Message)
+      log.Printf("Error code %d: %s\n", e.Code, e.Message)
     }
     return fmt.Errorf("Api call failed")
   }
@@ -189,23 +189,23 @@ func (c Cloudflare_api) dns_update(id string, name string, ip string) error {
 }
 
 func check_cf(cf_api Cloudflare_api, smtp Smtp_config, curr_ip string) error {
-  fmt.Printf("Getting info for %s DNS record on Cloudflare.\n", cf_api.Dns_record_name)
+  log.Printf("Getting info for %s DNS record on Cloudflare.\n", cf_api.Dns_record_name)
   cf_info, err := cf_api.dns_record_info(cf_api.Dns_record_name)
   if(err != nil){
-    fmt.Println("Not found: DNS Record will be added.")
+    log.Println("Not found: DNS Record will be added.")
     return fmt.Errorf("Adding a new record is not supported yet.")
   }
 
   cf_ip := cf_info.Content
 
-  fmt.Printf("Current public IP is: %s\n", curr_ip)
+  log.Printf("Current public IP is: %s\n", curr_ip)
   if(curr_ip != cf_ip){
-    fmt.Println("Public IP has changed. Updating Cloudflare.")
+    log.Println("Public IP has changed. Updating Cloudflare.")
     err := cf_api.dns_update(cf_info.Id, cf_api.Dns_record_name, curr_ip)
     if(err != nil){
       return err
     }
-    fmt.Println("IP Updated.")
+    log.Println("IP Updated.")
 
     //Send email
     s := "Public IP Changed to: " + curr_ip
@@ -213,10 +213,10 @@ func check_cf(cf_api Cloudflare_api, smtp Smtp_config, curr_ip string) error {
     err = sendmail(smtp, s, m)
     if(err != nil){
       //TODO: Add code to print actual error.
-      fmt.Println("Email could not be sent.")
+      log.Println("Email could not be sent.")
     }
   } else {
-    fmt.Println("No IP change.")
+    log.Println("No IP change.")
   }
 
   return nil
@@ -225,12 +225,23 @@ func check_cf(cf_api Cloudflare_api, smtp Smtp_config, curr_ip string) error {
 func main() {
   cron_ptr := flag.Bool("cron", false, "Run as a cronjob")
   config_ptr := flag.String("config", "config.json", "Path to config file.")
+  log_ptr := flag.Bool("log", false, "Enable logging.")
+  log_path_ptr := flag.String("log_path", "cloudflare_dynamic_dns.log", "Path to log file.")
 
   flag.Parse()
 
+  if(*log_ptr){
+    f, err := os.OpenFile(*log_path_ptr, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer f.Close()
+    log.SetOutput(f)
+  }
+
   file, err := os.Open(*config_ptr)
   if err != nil {
-    fmt.Println("Did you rename config.json.example to config.json? :) ")
+    log.Println("Did you rename config.json.example to config.json? :)")
   	log.Fatal(err)
   }
 

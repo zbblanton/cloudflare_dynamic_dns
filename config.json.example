@@ -12,7 +12,7 @@
     "pass": "yourpassword",
     "to": "user@gmail.com",
     "from": "user@gmail.com",
-    "enable": true
+    "enable": false
   },
   "public_ip_urls": [
     "http://icanhazip.com/",
