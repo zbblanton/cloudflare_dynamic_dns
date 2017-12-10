@@ -8,8 +8,10 @@ Compiling from source:
 ```
 go build
 ```
-Or download the latest binary from the [Releases](https://github.com/zbblanton/cloudflare_dynamic_dns/releases). 
+Or download the latest binary from the [Releases](https://github.com/zbblanton/cloudflare_dynamic_dns/releases).
 
+
+Then:
 ```
 Rename config.json.example -> config.json
 ```
