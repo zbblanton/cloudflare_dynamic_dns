@@ -4,6 +4,12 @@
 Small program that will automatically update your Cloudflare DNS with your dynamic public IP.
 
 ## Getting Started
+Compiling from source:
+```
+go build
+```
+Or download the latest binary from the [Releases](https://github.com/zbblanton/cloudflare_dynamic_dns/releases). 
+
 ```
 Rename config.json.example -> config.json
 ```
