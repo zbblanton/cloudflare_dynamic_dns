@@ -259,7 +259,7 @@ func main() {
   for {
     curr_ip := get_public_ip(config_data.Public_ip_urls[0])
     check_cf(cf_api, config_data.Smtp, curr_ip)
-    if(*cron_ptr){
+    if(*cron_ptr || os.Getenv("CF_CRON") == "true"){
       return
     }
     time.Sleep(time.Duration(config_data.Interval * 60) * time.Second)
