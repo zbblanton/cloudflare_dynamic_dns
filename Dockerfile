@@ -10,3 +10,4 @@ FROM alpine
 
 COPY --from=builder cloudflare_dynamic_dns/cloudflare_dynamic_dns /app/
 
+CMD ["./app/cloudflare_dynamic_dns"]
