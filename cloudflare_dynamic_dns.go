@@ -144,16 +144,12 @@ func (c Cloudflare_api) dns_update(id string, name string, ip string) error {
 
   json_data := `
     {
-      "type": "A",
-      "name": "` + name + `",
-      "content": "` + ip + `",
-      "ttl": 1,
-      "proxied": false
+      "content": "` + ip + `"
     }
   `
 
   client := &http.Client{}
-  req, err := http.NewRequest("PUT", api_url, strings.NewReader(json_data))
+  req, err := http.NewRequest("PATCH", api_url, strings.NewReader(json_data))
   if err != nil {
     log.Fatal(err)
   }
